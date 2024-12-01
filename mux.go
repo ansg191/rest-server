@@ -43,10 +43,26 @@ func (s *Server) checkAuth(r *http.Request) (username string, ok bool) {
 	}
 	var password string
 	username, password, ok = r.BasicAuth()
-	if !ok || !s.htpasswdFile.Validate(username, password) {
+	if !ok {
 		return "", false
 	}
-	return username, true
+
+	// Check LDAP
+	if s.ldap != nil {
+		auth, err := s.ldap.Validate(username, password)
+		if err != nil {
+			log.Printf("LDAP Auth failed: %v", err)
+			return "", false
+		}
+		return username, auth
+	}
+
+	// Check htpasswd
+	if s.htpasswdFile.Validate(username, password) {
+		return username, true
+	}
+
+	return "", false
 }
 
 func (s *Server) wrapMetricsAuth(f http.HandlerFunc) http.HandlerFunc {
@@ -66,7 +82,10 @@ func (s *Server) wrapMetricsAuth(f http.HandlerFunc) http.HandlerFunc {
 
 // NewHandler returns the master HTTP multiplexer/router.
 func NewHandler(server *Server) (http.Handler, error) {
-	if !server.NoAuth {
+	if !server.NoAuth && server.LdapAddr != "" {
+		server.ldap = NewLdap(server.LdapAddr, server.LdapUid, server.LdapBase)
+		log.Printf("LDAP Auth enabled (addr: %s, base: %s, uid: %s)", server.LdapAddr, server.LdapBase, server.LdapUid)
+	} else if !server.NoAuth {
 		var err error
 		if server.HtpasswdPath == "" {
 			server.HtpasswdPath = filepath.Join(server.Path, ".htpasswd")

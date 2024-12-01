@@ -70,6 +70,11 @@ func newRestServerApp() *restServerApp {
 	flags.BoolVar(&rv.Server.Prometheus, "prometheus", rv.Server.Prometheus, "enable Prometheus metrics")
 	flags.BoolVar(&rv.Server.PrometheusNoAuth, "prometheus-no-auth", rv.Server.PrometheusNoAuth, "disable auth for Prometheus /metrics endpoint")
 
+	// Ldap Options
+	flags.StringVar(&rv.Server.LdapAddr, "ldap-addr", rv.Server.LdapAddr, "ldap server address")
+	flags.StringVar(&rv.Server.LdapBase, "ldap-base", rv.Server.LdapBase, "ldap base dn")
+	flags.StringVar(&rv.Server.LdapUid, "ldap-uid", rv.Server.LdapUid, "ldap uid attribute")
+
 	return rv
 }
 
